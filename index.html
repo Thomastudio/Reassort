@@ -290,7 +290,7 @@ function viewImporter(){
     <div class="scroll"><table><thead><tr>${FIELDS.map(([,l])=>`<th>${l}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,5).map(r=>{const it=rowToItem(r,map);return `<tr>${FIELDS.map(([k])=>`<td>${esc(it[k])}</td>`).join('')}</tr>`}).join('')}</tbody></table></div>
     <div class="card-head" style="border-top:1px solid var(--line);border-bottom:0"><span class="meta">Aperçu des 5 premières lignes</span><div class="actions"><button class="btn" data-act="doimport" data-mode="add">Ajouter à mes articles</button><button class="btn primary" data-act="doimport" data-mode="replace">Remplacer mes articles</button></div></div></div>`;
   }
-  return h+'</div>';
+  return h+`<p class="hint">Tu veux revoir les données d'exemple ? <button class="btn small" data-act="loadsample">Recharger l'exemple</button></p></div>`;
 }
 const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 function guessMap(headers){const map={};FIELDS.forEach(([k,,syn])=>{const i=headers.findIndex(h=>{const n=norm(h);return syn.some(s=>n===s||n.startsWith(s)||n.includes(s))});map[k]=i});return map}
@@ -365,6 +365,7 @@ V.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)retu
   else if(act==='noop'){render()}
   else if(act==='copytpl'){copyText(TEMPLATE,'Modèle copié. Colle-le dans Excel puis enregistre en CSV.')}
   else if(act==='dltpl'){try{const blob=new Blob(['﻿'+TEMPLATE],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modele-reassort.csv';document.body.appendChild(a);a.click();a.remove();toast('Modèle téléchargé (si rien ne se passe, utilise « Copier le modèle »).')}catch(_){toast('Téléchargement impossible ici. Utilise « Copier le modèle ».')}}
+  else if(act==='loadsample'){S=SAMPLE();draftQty={};importState=null;save();view='commander';render();toast('Exemple rechargé.')}
   else if(act==='resetimport'){importState=null;render()}
   else if(act==='doimport'){const {rows,map}=importState;if(map.name<0){toast('Choisis la colonne qui contient le nom de l\'article.');return}
     const items=rows.map(r=>rowToItem(r,map)).filter(it=>it.name);
