@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Réassort</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: outil de travail. Barre d'en-tête + onglets, puis une vue à la fois. Résumé (chiffres) avant le détail (lignes). */
+:root{
+  --bg:#f5f7f6; --surface:#ffffff; --sunk:#eaefed; --line:#d6dedb; --fg:#17201e; --muted:#5b6b67;
+  --accent:#1f5f5b; --accent-fg:#ffffff; --accent-soft:#dcebe8;
+  --red:#b42318; --red-soft:#fde8e6; --amber:#9a5b00; --amber-soft:#fdf0d9;
+  --green:#1e7a46; --green-soft:#e1f3e8; --blue:#3b5b8c; --blue-soft:#e3eaf5;
+  --f-display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111816; --surface:#18211f; --sunk:#0d1312; --line:#2a3633; --fg:#e4ecea; --muted:#93a39f;
+  --accent:#5fb3aa; --accent-fg:#0b1513; --accent-soft:#1d3532;
+  --red:#f08a80; --red-soft:#3a1c1a; --amber:#e9b25a; --amber-soft:#36290f;
+  --green:#6fcf97; --green-soft:#16301f; --blue:#8fb0e3; --blue-soft:#1b2638; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111816; --surface:#18211f; --sunk:#0d1312; --line:#2a3633; --fg:#e4ecea; --muted:#93a39f;
+  --accent:#5fb3aa; --accent-fg:#0b1513; --accent-soft:#1d3532;
+  --red:#f08a80; --red-soft:#3a1c1a; --amber:#e9b25a; --amber-soft:#36290f;
+  --green:#6fcf97; --green-soft:#16301f; --blue:#8fb0e3; --blue-soft:#1b2638; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand h1{font-family:var(--f-display);font-size:28px;font-weight:700;margin:0;letter-spacing:-.01em}
+.brand h1 span{color:var(--accent)}
+.shop{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px}
+.shop input{font:inherit;color:var(--fg);background:transparent;border:1px dashed transparent;border-radius:6px;padding:2px 6px;min-width:0;width:16em}
+.shop input:hover,.shop input:focus{border-color:var(--line);outline:none}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--sunk);padding:4px;border-radius:10px}
+nav.tabs button{font:500 14px var(--f-body);border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer;display:flex;gap:6px;align-items:center}
+nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.count{font:500 12px var(--f-mono);background:var(--amber-soft);color:var(--amber);border-radius:99px;padding:0 7px}
+.banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--accent-soft);border-radius:10px;padding:10px 14px;font-size:14px}
+.banner p{margin:0;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.kpi .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.kpi .val{font:600 26px var(--f-display);font-variant-numeric:tabular-nums}
+.kpi.warn .val{color:var(--amber)} .kpi.crit .val{color:var(--red)}
+h2{font-family:var(--f-display);font-size:20px;margin:0;text-wrap:balance}
+.sec-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.card-head h3{margin:0;font:600 16px var(--f-display)}
+.card-head .meta{color:var(--muted);font-size:13px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:500;text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.name{font-weight:500}
+.sub{color:var(--muted);font-size:12px}
+.pill{display:inline-block;font-size:12px;font-weight:500;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.p-rupture{background:var(--red-soft);color:var(--red)} .p-commander{background:var(--amber-soft);color:var(--amber)}
+.p-encours{background:var(--blue-soft);color:var(--blue)} .p-ok{background:var(--green-soft);color:var(--green)}
+.p-surstock{background:var(--sunk);color:var(--muted)}
+.cov{display:flex;align-items:center;gap:8px;min-width:120px}
+.bar{position:relative;flex:1;height:6px;background:var(--sunk);border-radius:3px}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--green)}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg);opacity:.5}
+input.cell,select.cell{font:inherit;font-family:var(--f-mono);width:5.5em;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+input.cell:focus,select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:500 14px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.danger{color:var(--red)}
+.btn.small{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar input[type=search]{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);min-width:0;flex:1 1 200px}
+.toolbar select{font:inherit;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg)}
+form.edit{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:16px}
+form.edit label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+form.edit input{font:inherit;color:var(--fg);padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+form.edit .actions{grid-column:1/-1}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:28px 16px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;background:var(--surface)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.maprow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:16px}
+.maprow label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.maprow select{font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+pre.tpl{font:13px var(--f-mono);background:var(--sunk);padding:12px;border-radius:8px;overflow-x:auto;margin:0}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.btn,nav.tabs button{transition:background .15s,border-color .15s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Réa<span>ssort</span></h1>
+      <div class="shop"><label for="shopName">Commerce :</label><input id="shopName" aria-label="Nom du commerce"></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-view="commander">À commander <span class="count" id="cntOrder"></span></button>
+      <button role="tab" data-view="articles">Articles</button>
+      <button role="tab" data-view="commandes">Commandes en cours <span class="count" id="cntOpen"></span></button>
+      <button role="tab" data-view="importer">Importer</button>
+    </nav>
+  </header>
+
+  <div class="banner" id="demoBanner" hidden>
+    <p><strong>Données d'exemple</strong> (épicerie fictive). Importe ton fichier Excel ou repars de zéro.</p>
+    <div class="actions" id="resetBox"><button class="btn small" id="resetBtn">Repartir de zéro</button></div>
+  </div>
+
+  <main id="view"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+const KEY='reassort-v1';
+const CYC=it=>it.cycle>0?it.cycle:7; // jours entre deux commandes
+const SAMPLE=()=>({
+  shop:'Épicerie du Lac (exemple)', demo:true, nextId:13,
+  items:[
+    {id:1,cycle:3,name:'Lait entier 1 L',supplier:'Laiterie Moudon',unit:'brique',stock:18,sales30:330,lead:2,safety:2,price:1.35,pack:12},
+    {id:2,cycle:3,name:'Gruyère AOP 250 g',supplier:'Laiterie Moudon',unit:'pièce',stock:22,sales30:96,lead:2,safety:2,price:5.9,pack:6},
+    {id:3,cycle:3,name:'Yogourt nature 180 g',supplier:'Laiterie Moudon',unit:'pot',stock:0,sales30:150,lead:2,safety:1,price:0.75,pack:12},
+    {id:4,cycle:3,name:'Fromage à raclette 400 g',supplier:'Laiterie Moudon',unit:'pièce',stock:6,sales30:84,lead:3,safety:2,price:8.4,pack:6},
+    {id:5,cycle:1,name:'Pain paysan 500 g',supplier:'Boulangerie Ouchy',unit:'pièce',stock:9,sales30:420,lead:1,safety:0,price:2.6,pack:1},
+    {id:6,cycle:1,name:'Croissants (x6)',supplier:'Boulangerie Ouchy',unit:'sachet',stock:14,sales30:150,lead:1,safety:0,price:3.2,pack:1},
+    {id:7,cycle:14,name:'Pâtes fusilli 500 g',supplier:'Centrale Romande',unit:'paquet',stock:64,sales30:120,lead:5,safety:3,price:1.1,pack:20},
+    {id:8,cycle:14,name:'Huile de colza 1 L',supplier:'Centrale Romande',unit:'bouteille',stock:7,sales30:45,lead:5,safety:3,price:3.4,pack:6},
+    {id:9,cycle:14,name:'Café en grains 500 g',supplier:'Centrale Romande',unit:'paquet',stock:30,sales30:60,lead:5,safety:3,price:6.8,pack:10},
+    {id:10,cycle:14,name:'Chocolat noir 100 g',supplier:'Centrale Romande',unit:'tablette',stock:240,sales30:75,lead:5,safety:3,price:1.45,pack:24},
+    {id:11,cycle:2,name:'Pommes Gala (kg)',supplier:'Primeurs du Léman',unit:'kg',stock:25,sales30:270,lead:1,safety:1,price:2.2,pack:5},
+    {id:12,cycle:2,name:'Tomates grappe (kg)',supplier:'Primeurs du Léman',unit:'kg',stock:4,sales30:180,lead:1,safety:1,price:3.1,pack:5}
+  ],
+  orders:[{id:'C-001',supplier:'Laiterie Moudon',date:today(-1),lines:[{itemId:4,name:'Fromage à raclette 400 g',qty:24,price:8.4}],status:'open'}]
+});
+function today(off){const d=new Date();d.setDate(d.getDate()+(off||0));return d.toISOString().slice(0,10)}
+
+let S=load(); let view=readHash()||'commander'; let filter={q:'',status:'all'}; let editId=null; let importState=null; let draftQty={};
+function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);if(o&&Array.isArray(o.items))return o}}catch(e){}return SAMPLE()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function readHash(){const h=(location.hash||'').slice(1);return ['commander','articles','commandes','importer'].includes(h)?h:null}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chf=n=>'CHF '+(Math.round(n*100)/100).toLocaleString('fr-CH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const int=n=>Math.round(n).toLocaleString('fr-CH');
+const num=v=>{if(typeof v==='number')return v;const x=parseFloat(String(v||'').replace(/['\s]/g,'').replace(',','.'));return isFinite(x)?x:0};
+
+// ---- calcul réappro ----
+function onOrder(id){let q=0;S.orders.forEach(o=>{if(o.status==='open')o.lines.forEach(l=>{if(l.itemId===id)q+=l.qty})});return q}
+function calc(it){
+  const daily=it.sales30/30, oo=onOrder(it.id), pos=it.stock+oo;
+  const rop=daily*(it.lead+it.safety);              // point de commande
+  const target=daily*(it.lead+it.safety+CYC(it));   // niveau visé après commande
+  const cover=daily>0?it.stock/daily:Infinity;
+  let sug=0;
+  if(daily>0&&pos<=rop){sug=Math.max(0,target-pos);const p=Math.max(1,it.pack||1);sug=Math.ceil(sug/p)*p}
+  let st='ok';
+  if(it.stock<=0&&oo===0)st='rupture';
+  else if(sug>0)st=it.stock<=0?'rupture':'commander';
+  else if(oo>0&&it.stock<=rop)st='encours';
+  else if(daily>0&&cover>Math.max(60,3*(it.lead+it.safety+CYC(it))))st='surstock';
+  else if(daily===0&&it.stock>0)st='surstock';
+  return {daily,oo,rop,cover,sug,st,leadCover:it.lead+it.safety};
+}
+const ST={rupture:'Rupture',commander:'À commander',encours:'Commande en cours',ok:'OK',surstock:'Surstock'};
+const pill=st=>`<span class="pill p-${st}">${ST[st]}</span>`;
+function covCell(it,c){
+  if(!isFinite(c.cover))return '<span class="sub">pas de ventes</span>';
+  const max=45, w=Math.min(100,c.cover/max*100), mk=Math.min(100,c.leadCover/max*100);
+  const col=c.cover<=c.leadCover?'var(--amber)':'var(--green)';
+  return `<div class="cov"><div class="bar" title="Trait = délai + sécurité (${c.leadCover} j)"><i style="width:${w}%;background:${it.stock<=0?'var(--red)':col}"></i><b style="left:${mk}%"></b></div><span class="num" style="font-family:var(--f-mono);font-size:13px">${c.cover>99?'99+':c.cover.toFixed(0)} j</span></div>`;
+}
+
+// ---- rendu ----
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===view?'true':'false'));
+  $('#shopName').value=S.shop||'';
+  $('#demoBanner').hidden=!S.demo;
+  const calcs=S.items.map(it=>[it,calc(it)]);
+  const nOrd=calcs.filter(([,c])=>c.sug>0).length, nOpen=S.orders.filter(o=>o.status==='open').length;
+  $('#cntOrder').textContent=nOrd||''; $('#cntOrder').hidden=!nOrd;
+  $('#cntOpen').textContent=nOpen||''; $('#cntOpen').hidden=!nOpen;
+  const v=$('#view');
+  if(view==='commander')v.innerHTML=viewCommander(calcs);
+  if(view==='articles')v.innerHTML=viewArticles(calcs);
+  if(view==='commandes')v.innerHTML=viewCommandes();
+  if(view==='importer')v.innerHTML=viewImporter();
+}
+
+function viewCommander(calcs){
+  const stockVal=S.items.reduce((a,it)=>a+Math.max(0,it.stock)*it.price,0);
+  const toOrder=calcs.filter(([,c])=>c.sug>0);
+  const rupt=calcs.filter(([,c])=>c.st==='rupture').length;
+  const orderVal=toOrder.reduce((a,[it,c])=>a+qtyFor(it,c)*it.price,0);
+  const groups={};toOrder.forEach(([it,c])=>{(groups[it.supplier||'Sans fournisseur']=groups[it.supplier||'Sans fournisseur']||[]).push([it,c])});
+  let h=`<div class="stack">
+  <div class="kpis">
+    <div class="kpi ${toOrder.length?'warn':''}"><span class="lbl">Articles à commander</span><span class="val">${toOrder.length}</span></div>
+    <div class="kpi ${rupt?'crit':''}"><span class="lbl">En rupture</span><span class="val">${rupt}</span></div>
+    <div class="kpi"><span class="lbl">Montant à commander</span><span class="val">${chf(orderVal)}</span></div>
+    <div class="kpi"><span class="lbl">Valeur du stock</span><span class="val">${chf(stockVal)}</span></div>
+  </div>
+  <div class="sec-head"><h2>Propositions de commande</h2><p class="hint">Quantité = ventes/jour × (délai + sécurité + jours jusqu'à la prochaine commande) − stock − en commande, arrondie au colisage.</p></div>`;
+  if(!toOrder.length)h+=`<div class="card"><div class="empty">Rien à commander pour l'instant. Mets à jour tes stocks dans l'onglet Articles.</div></div>`;
+  Object.keys(groups).sort().forEach(sup=>{
+    const rows=groups[sup]; const tot=rows.reduce((a,[it,c])=>a+qtyFor(it,c)*it.price,0);
+    h+=`<div class="card"><div class="card-head"><div><h3>${esc(sup)}</h3><span class="meta">${rows.length} article${rows.length>1?'s':''} · ${chf(tot)}</span></div>
+      <div class="actions"><button class="btn small" data-act="copy" data-sup="${esc(sup)}">Copier le bon</button><button class="btn small primary" data-act="create" data-sup="${esc(sup)}">Créer la commande</button></div></div>
+      <div class="scroll"><table><thead><tr><th>Article</th><th>État</th><th class="num">Stock</th><th>Couverture</th><th class="num">Ventes/j</th><th class="num">Qté</th><th class="num">Montant</th></tr></thead><tbody>`;
+    rows.forEach(([it,c])=>{const q=qtyFor(it,c);
+      h+=`<tr><td><div class="name">${esc(it.name)}</div><div class="sub">colis de ${it.pack||1} · délai ${it.lead} j · cde tous les ${CYC(it)} j</div></td><td>${pill(c.st)}</td><td class="num">${int(it.stock)}</td><td>${covCell(it,c)}</td><td class="num">${c.daily.toFixed(1)}</td>
+      <td class="num"><input class="cell" type="number" min="0" step="${it.pack||1}" id="q-${it.id}" data-qty="${it.id}" value="${q}" aria-label="Quantité ${esc(it.name)}"></td><td class="num">${chf(q*it.price)}</td></tr>`});
+    h+=`</tbody></table></div></div>`;
+  });
+  return h+`<div class="legend"><span>${pill('rupture')} stock à zéro</span><span>${pill('commander')} sous le point de commande</span><span>${pill('encours')} déjà commandé</span><span>Trait sur la barre = délai + sécurité</span></div></div>`;
+}
+function qtyFor(it,c){return draftQty[it.id]!=null?draftQty[it.id]:c.sug}
+
+function viewArticles(calcs){
+  const q=filter.q.toLowerCase();
+  const list=calcs.filter(([it,c])=>(!q||(it.name+' '+it.supplier).toLowerCase().includes(q))&&(filter.status==='all'||c.st===filter.status));
+  let h=`<div class="stack"><div class="sec-head"><h2>Articles <span class="sub">(${S.items.length})</span></h2>
+    <div class="actions"><button class="btn primary small" data-act="new">Ajouter un article</button></div></div>
+  <div class="toolbar"><input type="search" id="q" placeholder="Rechercher un article ou un fournisseur" value="${esc(filter.q)}">
+    <select id="fst" aria-label="Filtrer par état"><option value="all">Tous les états</option>${Object.keys(ST).map(k=>`<option value="${k}" ${filter.status===k?'selected':''}>${ST[k]}</option>`).join('')}</select></div>`;
+  if(editId!=null)h+=editForm();
+  h+=`<p class="hint">Modifie le stock directement dans la colonne Stock : le calcul se met à jour tout seul.</p>
+  <div class="card"><div class="scroll"><table><thead><tr><th>Article</th><th>Fournisseur</th><th>État</th><th class="num">Stock</th><th class="num">En cde</th><th>Couverture</th><th class="num">Ventes 30 j</th><th class="num">Délai</th><th class="num">Prix</th><th></th></tr></thead><tbody>`;
+  if(!list.length)h+=`<tr><td colspan="10"><div class="empty">${S.items.length?'Aucun article ne correspond.':'Aucun article. Importe ton fichier ou ajoute un premier article.'}</div></td></tr>`;
+  list.forEach(([it,c])=>{h+=`<tr><td><div class="name">${esc(it.name)}</div><div class="sub">${esc(it.unit||'')}${it.pack>1?' · colis de '+it.pack:''}</div></td><td>${esc(it.supplier)}</td><td>${pill(c.st)}</td>
+    <td class="num"><input class="cell" type="number" min="0" id="s-${it.id}" data-stock="${it.id}" value="${it.stock}" aria-label="Stock ${esc(it.name)}"></td><td class="num">${c.oo||'–'}</td><td>${covCell(it,c)}</td><td class="num">${int(it.sales30)}</td><td class="num">${it.lead} j</td><td class="num">${it.price.toFixed(2)}</td>
+    <td><button class="btn small" data-act="edit" data-id="${it.id}">Modifier</button></td></tr>`});
+  return h+`</tbody></table></div></div></div>`;
+}
+function editForm(){
+  const it=editId==='new'?{name:'',supplier:'',unit:'pièce',stock:0,sales30:0,lead:2,safety:1,price:0,pack:1,cycle:7}:S.items.find(x=>x.id===editId);
+  if(!it)return '';
+  const f=(k,l,t='number',extra='')=>`<label>${l}<input id="f-${k}" name="${k}" type="${t}" value="${esc(it[k])}" ${t==='number'?'step="any" min="0"':''} ${extra}></label>`;
+  return `<div class="card"><div class="card-head"><h3>${editId==='new'?'Nouvel article':'Modifier : '+esc(it.name)}</h3></div>
+  <form class="edit" id="editForm">${f('name','Nom','text','required')}${f('supplier','Fournisseur','text')}${f('unit','Unité','text')}${f('stock','Stock actuel')}${f('sales30','Ventes des 30 derniers jours')}${f('lead','Délai de livraison (jours)')}${f('safety','Stock de sécurité (jours)')}${f('price','Prix d\'achat (CHF)')}${f('pack','Colisage (unités par carton)')}${f('cycle','Commande tous les … jours')}
+  <div class="actions"><button class="btn primary" type="submit">Enregistrer</button><button class="btn" type="button" data-act="cancel">Annuler</button>${editId!=='new'?'<span id="delBox"><button class="btn danger" type="button" data-act="del">Supprimer</button></span>':''}</div></form></div>`;
+}
+
+function viewCommandes(){
+  const open=S.orders.filter(o=>o.status==='open'), done=S.orders.filter(o=>o.status==='received').slice(-5).reverse();
+  let h=`<div class="stack"><div class="sec-head"><h2>Commandes en cours</h2><p class="hint">À la livraison, clique « Réceptionner » : les quantités s'ajoutent au stock.</p></div>`;
+  if(!open.length)h+=`<div class="card"><div class="empty">Aucune commande en cours. Crée-en une depuis l'onglet À commander.</div></div>`;
+  open.forEach(o=>{const tot=o.lines.reduce((a,l)=>a+l.qty*l.price,0);
+    h+=`<div class="card"><div class="card-head"><div><h3>${esc(o.supplier)}</h3><span class="meta">${o.id} · passée le ${fmtDate(o.date)} · ${chf(tot)}</span></div>
+    <div class="actions"><button class="btn small" data-act="copyorder" data-oid="${o.id}">Copier le bon</button><button class="btn small primary" data-act="receive" data-oid="${o.id}">Réceptionner</button><span id="cx-${o.id}"><button class="btn small danger" data-act="cancelorder" data-oid="${o.id}">Annuler</button></span></div></div>
+    <div class="scroll"><table><thead><tr><th>Article</th><th class="num">Qté</th><th class="num">Montant</th></tr></thead><tbody>${o.lines.map(l=>`<tr><td>${esc(l.name)}</td><td class="num">${int(l.qty)}</td><td class="num">${chf(l.qty*l.price)}</td></tr>`).join('')}</tbody></table></div></div>`});
+  if(done.length){h+=`<h2>Dernières réceptions</h2><div class="card"><div class="scroll"><table><thead><tr><th>N°</th><th>Fournisseur</th><th>Passée le</th><th>Reçue le</th><th class="num">Montant</th></tr></thead><tbody>`+
+    done.map(o=>`<tr><td>${o.id}</td><td>${esc(o.supplier)}</td><td>${fmtDate(o.date)}</td><td>${fmtDate(o.received)}</td><td class="num">${chf(o.lines.reduce((a,l)=>a+l.qty*l.price,0))}</td></tr>`).join('')+`</tbody></table></div></div>`}
+  return h+'</div>';
+}
+const fmtDate=d=>d?d.split('-').reverse().join('.'):'';
+
+const FIELDS=[['name','Nom de l\'article',['nom','article','produit','designation','libelle','description']],['supplier','Fournisseur',['fournisseur','supplier','grossiste']],['unit','Unité',['unite','unit']],['stock','Stock actuel',['stock','quantite','qte','qty','inventaire']],['sales30','Ventes 30 jours',['vente','sales','sortie','conso']],['lead','Délai (jours)',['delai','lead']],['safety','Sécurité (jours)',['securite','safety']],['price','Prix d\'achat',['prix','cout','price','pa']],['pack','Colisage',['colis','carton','pack','conditionnement']],['cycle','Commande tous les (jours)',['frequence','cycle','periodicite','commande tous']]];
+const TEMPLATE='Article;Fournisseur;Unité;Stock;Ventes 30 jours;Délai (jours);Sécurité (jours);Prix achat;Colisage;Commande tous les (jours)\nLait entier 1 L;Laiterie Moudon;brique;18;330;2;2;1.35;12;3\nPâtes fusilli 500 g;Centrale Romande;paquet;64;120;5;3;1.10;20;14';
+function viewImporter(){
+  let h=`<div class="stack"><div class="sec-head"><h2>Importer tes articles</h2><p class="hint">Fichier Excel (.xlsx) ou CSV, une ligne par article.</p></div>`;
+  if(!importState){
+    h+=`<label class="drop" id="drop" for="file"><strong>Glisse ton fichier ici</strong><span class="sub">ou clique pour le choisir (.xlsx, .xls, .csv)</span><input type="file" id="file" accept=".xlsx,.xls,.csv,.txt" hidden></label>
+    <div class="card"><div class="card-head"><h3>Format attendu</h3><div class="actions"><button class="btn small" data-act="copytpl">Copier le modèle</button><button class="btn small" data-act="dltpl">Télécharger le modèle</button></div></div>
+    <div style="padding:16px" class="stack"><p class="hint">Les noms de colonnes peuvent varier : tu choisiras la correspondance à l'étape suivante. Seule la colonne « Article » est obligatoire.</p><pre class="tpl">${esc(TEMPLATE)}</pre></div></div>`;
+  } else {
+    const {headers,rows,map,fileName}=importState;
+    h+=`<div class="card"><div class="card-head"><div><h3>${esc(fileName)}</h3><span class="meta">${rows.length} ligne${rows.length>1?'s':''} trouvée${rows.length>1?'s':''}</span></div><button class="btn small" data-act="resetimport">Choisir un autre fichier</button></div>
+    <div class="maprow">${FIELDS.map(([k,l])=>`<label for="m-${k}">${l}<select id="m-${k}" data-map="${k}"><option value="-1">(ignorer)</option>${headers.map((hd,i)=>`<option value="${i}" ${map[k]===i?'selected':''}>${esc(hd)}</option>`).join('')}</select></label>`).join('')}</div>
+    <div class="scroll"><table><thead><tr>${FIELDS.map(([,l])=>`<th>${l}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,5).map(r=>{const it=rowToItem(r,map);return `<tr>${FIELDS.map(([k])=>`<td>${esc(it[k])}</td>`).join('')}</tr>`}).join('')}</tbody></table></div>
+    <div class="card-head" style="border-top:1px solid var(--line);border-bottom:0"><span class="meta">Aperçu des 5 premières lignes</span><div class="actions"><button class="btn" data-act="doimport" data-mode="add">Ajouter à mes articles</button><button class="btn primary" data-act="doimport" data-mode="replace">Remplacer mes articles</button></div></div></div>`;
+  }
+  return h+'</div>';
+}
+const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+function guessMap(headers){const map={};FIELDS.forEach(([k,,syn])=>{const i=headers.findIndex(h=>{const n=norm(h);return syn.some(s=>n===s||n.startsWith(s)||n.includes(s))});map[k]=i});return map}
+function rowToItem(r,map){const g=k=>map[k]>=0?r[map[k]]:undefined;
+  return {name:String(g('name')||'').trim(),supplier:String(g('supplier')||'').trim(),unit:String(g('unit')||'').trim(),stock:num(g('stock')),sales30:num(g('sales30')),lead:map.lead>=0?num(g('lead')):2,safety:map.safety>=0?num(g('safety')):1,price:num(g('price')),pack:Math.max(1,Math.round(num(g('pack')))||1),cycle:map.cycle>=0?(num(g('cycle'))||7):7}}
+function parseCSV(t){const first=t.split(/\r?\n/)[0]||'';const d=[';','\t',','].sort((a,b)=>first.split(b).length-first.split(a).length)[0];
+  const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;else if(c===d){row.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=c}
+  if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(x=>String(x).trim()!==''))}
+function handleFile(file){
+  if(!file)return;
+  const isCsv=/\.(csv|txt)$/i.test(file.name), rd=new FileReader();
+  rd.onerror=()=>toast('Impossible de lire ce fichier.');
+  rd.onload=()=>{try{let rows;
+      if(isCsv)rows=parseCSV(String(rd.result));
+      else{if(!window.XLSX){toast('Lecture Excel indisponible. Enregistre ton fichier en CSV et réessaie.');return}
+        const wb=XLSX.read(new Uint8Array(rd.result),{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true}).filter(r=>r.some(x=>String(x).trim()!==''))}
+      if(rows.length<2){toast('Le fichier doit avoir une ligne de titres puis au moins un article.');return}
+      const headers=rows[0].map(String);importState={fileName:file.name,headers,rows:rows.slice(1),map:guessMap(headers)};render();
+    }catch(e){toast('Ce fichier n\'a pas pu être lu. Vérifie qu\'il s\'agit bien d\'un Excel ou d\'un CSV.')}};
+  isCsv?rd.readAsText(file):rd.readAsArrayBuffer(file);
+}
+
+// ---- texte des bons ----
+function orderText(sup,lines){return `Bon de commande – ${S.shop||''}\nFournisseur : ${sup}\nDate : ${fmtDate(today())}\n\n`+lines.map(l=>`- ${l.qty} × ${l.name}`).join('\n')+`\n\nMerci de confirmer le délai de livraison.\n`}
+function copyText(t,okMsg){const fallback=()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}ta.remove();toast(ok?okMsg:'Copie impossible ici. Sélectionne le texte à la main.')};
+  try{navigator.clipboard.writeText(t).then(()=>toast(okMsg),fallback)}catch(e){fallback()}}
+function linesFor(sup){return S.items.filter(it=>(it.supplier||'Sans fournisseur')===sup).map(it=>[it,calc(it)]).filter(([,c])=>c.sug>0).map(([it,c])=>({itemId:it.id,name:it.name,qty:qtyFor(it,c),price:it.price})).filter(l=>l.qty>0)}
+
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)}
+
+// ---- événements ----
+document.querySelector('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.view;try{history.replaceState(null,'','#'+view)}catch(_){location.hash=view}render()});
+window.addEventListener('hashchange',()=>{const h=readHash();if(h&&h!==view){view=h;render()}});
+$('#shopName').addEventListener('change',e=>{S.shop=e.target.value.trim();save()});
+$('#resetBox').addEventListener('click',e=>{const a=e.target.closest('button');if(!a)return;const box=$('#resetBox');
+  if(a.id==='resetBtn'){box.innerHTML='<span class="confirm">Effacer les exemples ? <button class="btn small danger" id="resetYes">Oui, effacer</button><button class="btn small" id="resetNo">Non</button></span>'}
+  else if(a.id==='resetYes'){S={shop:'',demo:false,nextId:1,items:[],orders:[]};draftQty={};save();box.innerHTML='<button class="btn small" id="resetBtn">Repartir de zéro</button>';view='importer';render();toast('Exemples effacés. Importe ton fichier.')}
+  else{box.innerHTML='<button class="btn small" id="resetBtn">Repartir de zéro</button>'}});
+
+const V=$('#view');
+V.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.qty){draftQty[+t.dataset.qty]=Math.max(0,Math.round(num(t.value)));render()}
+  else if(t.dataset.stock){const it=S.items.find(x=>x.id===+t.dataset.stock);if(it){it.stock=Math.max(0,num(t.value));delete draftQty[it.id];save();render()}}
+  else if(t.id==='fst'){filter.status=t.value;render()}
+  else if(t.id==='file'){handleFile(t.files[0])}
+  else if(t.dataset.map){importState.map[t.dataset.map]=+t.value;render()}
+});
+V.addEventListener('input',e=>{if(e.target.id==='q'){filter.q=e.target.value;const pos=e.target.selectionStart;render();const q=$('#q');q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
+V.addEventListener('dragover',e=>{const d=e.target.closest('#drop');if(d){e.preventDefault();d.classList.add('over')}});
+V.addEventListener('dragleave',e=>{const d=e.target.closest('#drop');if(d)d.classList.remove('over')});
+V.addEventListener('drop',e=>{const d=e.target.closest('#drop');if(d){e.preventDefault();d.classList.remove('over');handleFile(e.dataTransfer.files[0])}});
+V.addEventListener('submit',e=>{if(e.target.id!=='editForm')return;e.preventDefault();const fd=new FormData(e.target);
+  const it={name:String(fd.get('name')).trim(),supplier:String(fd.get('supplier')).trim(),unit:String(fd.get('unit')).trim(),stock:num(fd.get('stock')),sales30:num(fd.get('sales30')),lead:num(fd.get('lead')),safety:num(fd.get('safety')),price:num(fd.get('price')),pack:Math.max(1,Math.round(num(fd.get('pack')))||1),cycle:Math.max(1,num(fd.get('cycle')))||7};
+  if(!it.name){toast('Donne un nom à l\'article.');return}
+  if(editId==='new'){it.id=S.nextId++;S.items.push(it);toast('Article ajouté.')}else{Object.assign(S.items.find(x=>x.id===editId),it);delete draftQty[editId];toast('Article enregistré.')}
+  editId=null;save();render()});
+V.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
+  if(act==='new'){editId='new';render();$('#f-name')&&$('#f-name').focus()}
+  else if(act==='edit'){editId=+b.dataset.id;render();window.scrollTo({top:0,behavior:'smooth'})}
+  else if(act==='cancel'){editId=null;render()}
+  else if(act==='del'){$('#delBox').innerHTML='<span class="confirm">Supprimer cet article ? <button class="btn small danger" data-act="delyes">Oui</button><button class="btn small" data-act="cancel">Non</button></span>'}
+  else if(act==='delyes'){S.items=S.items.filter(x=>x.id!==editId);editId=null;save();render();toast('Article supprimé.')}
+  else if(act==='copy'){const l=linesFor(b.dataset.sup);copyText(orderText(b.dataset.sup,l),'Bon copié. Colle-le dans un e-mail.')}
+  else if(act==='create'){const sup=b.dataset.sup,l=linesFor(sup);if(!l.length){toast('Aucune quantité à commander.');return}
+    const id='C-'+String(S.orders.length+1).padStart(3,'0');S.orders.push({id,supplier:sup,date:today(),lines:l,status:'open'});l.forEach(x=>delete draftQty[x.itemId]);save();render();toast(`Commande ${id} créée chez ${sup}.`)}
+  else if(act==='copyorder'){const o=S.orders.find(x=>x.id===b.dataset.oid);copyText(orderText(o.supplier,o.lines),'Bon copié.')}
+  else if(act==='receive'){const o=S.orders.find(x=>x.id===b.dataset.oid);o.lines.forEach(l=>{const it=S.items.find(x=>x.id===l.itemId);if(it)it.stock+=l.qty});o.status='received';o.received=today();save();render();toast(`${o.id} réceptionnée, stock mis à jour.`)}
+  else if(act==='cancelorder'){$('#cx-'+b.dataset.oid).innerHTML=`<span class="confirm">Annuler ? <button class="btn small danger" data-act="cancelyes" data-oid="${b.dataset.oid}">Oui</button><button class="btn small" data-act="noop">Non</button></span>`}
+  else if(act==='cancelyes'){S.orders=S.orders.filter(x=>x.id!==b.dataset.oid);save();render();toast('Commande annulée.')}
+  else if(act==='noop'){render()}
+  else if(act==='copytpl'){copyText(TEMPLATE,'Modèle copié. Colle-le dans Excel puis enregistre en CSV.')}
+  else if(act==='dltpl'){try{const blob=new Blob(['﻿'+TEMPLATE],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modele-reassort.csv';document.body.appendChild(a);a.click();a.remove();toast('Modèle téléchargé (si rien ne se passe, utilise « Copier le modèle »).')}catch(_){toast('Téléchargement impossible ici. Utilise « Copier le modèle ».')}}
+  else if(act==='resetimport'){importState=null;render()}
+  else if(act==='doimport'){const {rows,map}=importState;if(map.name<0){toast('Choisis la colonne qui contient le nom de l\'article.');return}
+    const items=rows.map(r=>rowToItem(r,map)).filter(it=>it.name);
+    if(b.dataset.mode==='replace'){S.items=[];S.orders=[];S.nextId=1;draftQty={}}
+    items.forEach(it=>{it.id=S.nextId++;S.items.push(it)});S.demo=false;importState=null;save();view='commander';render();toast(`${items.length} article${items.length>1?'s':''} importé${items.length>1?'s':''}.`)}
+});
+render();
+})();
+</script>
+</body>
+</html>
